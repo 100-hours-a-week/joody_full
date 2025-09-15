@@ -1,13 +1,24 @@
 package org.example.domain;
 
 public class Item {
-    private String name;
-
-    public Item(String name){
-        this.name = name;
+    public enum Type{
+        LAPTOP, MOUSE, CHARGER, HEADPHONES,
+        UMBRELLA, PEN, TUMBLER, BLANKET
     }
 
-    public String getName(){
+    private String name;
+    private Type type;
+
+    public Item(String name, Type type) {
+        this.name = name;
+        this.type = type;
+    }
+
+    public String getName() {
         return name;
+    }
+
+    public Type getType() {
+        return type;
     }
 }
