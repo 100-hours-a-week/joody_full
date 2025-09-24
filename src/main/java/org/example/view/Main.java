@@ -3,14 +3,20 @@ package org.example.view;
 import org.example.domain.Item;
 import org.example.service.RentalService;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 public class Main {
+    // 대여, 반납 상수
+    private static final int ACTION_RENT = 1;
+    private static final int ACTION_RETURN = 2;
+
+    //카테고리 상수
+    private static final int CATEGORY_ELECTRICS = 1;
+    private static final int CATEGORY_DAILY = 2;
+
     public static void main(String[] args) {
+
         Scanner scanner = new Scanner(System.in);
         RentalService rentalService = new RentalService();
 
@@ -42,9 +48,9 @@ public class Main {
         int action = Integer.parseInt(scanner.nextLine().trim());
 
         // 사용자 대여 목록 관리
-        List<Item> rentedItems = new ArrayList<>();
+        Map<String, Item> rentedItems = new HashMap<>();
 
-        if (action == 1) {
+        if (action == ACTION_RENT) {
             // === 대여 프로세스 ===
             // 카테고리 선택
             System.out.print("대여하고 싶은 카테고리를 선택해주세요. ( 1. 전자제품 / 2. 일상용품 ) : ");
@@ -52,10 +58,14 @@ public class Main {
 
             // 대여 가능한 물품 가져오기
             List<Item> availableItems;
-            if (categoryNo == 1) {
+            if (categoryNo == CATEGORY_ELECTRICS) {
                 availableItems = rentalService.getElectricItems();
-            } else {
+            } else if (categoryNo == CATEGORY_DAILY) {
                 availableItems = rentalService.getDailyItems();
+            } else {
+                System.out.println("잘못된 입력입니다.");
+                rentalService.shutdown();
+                return;
             }
 
             // 대여 가능 물품 출력
@@ -76,7 +86,7 @@ public class Main {
 
 
 
-            // 선택한 물품 출력
+            // 선택한 대여 물품 비동기 처리
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             for (String s : input) {
                 int idx = Integer.parseInt(s.trim()) - 1;
@@ -87,10 +97,8 @@ public class Main {
 
                 // 대여 성공 시에만 rentedItems에 추가 -> 비동기라서 join 이후 확인
                 future.thenRun(() -> {
-                    synchronized (rentedItems){
-                        if(selectedItem.getStock() >= 0){
-                            rentedItems.add(selectedItem);
-                        }
+                    if(selectedItem.getStock() >= 0){
+                            rentedItems.put(selectedItem.getName(), selectedItem);
                     }
                 });
             }
@@ -123,19 +131,27 @@ public class Main {
                 System.out.println("이용해주셔서 감사합니다! :)");
             }
         }
-        else if (action == 2) {
+        else if (action == ACTION_RETURN) {
             // === 반납 프로세스 ===
             System.out.print("반납할 물품 이름을 입력해주세요. 예) Laptop : ");
             String returnItemName = scanner.nextLine().trim();
 
 
             // ** Optional로 존재하는 값이 있는지, 없는지 null값이 생길 수도 있어서 Optional 사용
-            Optional<Item> rented = rentedItems.stream().filter(item -> item.getName().equals(returnItemName)).findFirst(); // findFirst() 찾아낸 값에 제일 첫번째 값 가져옴.
-            if (rented.isPresent()) {
-                rentalService.returnItemAsync(rented.get(), name + "(" + process + ")");
-                rentedItems.remove(rented.get());  // 반납 완료 후 목록에서 제거
-            } else {
-                System.out.println(returnItemName + "은(는) 존재하지 않는 물품입니다. ");
+//            Optional<Item> rented = rentedItems.stream().filter(item -> item.getName().equals(returnItemName)).findFirst(); // findFirst() 찾아낸 값에 제일 첫번째 값 가져옴.
+//            if (rented.isPresent()) {
+//                rentalService.returnItemAsync(rented.get(), name + "(" + process + ")");
+//                rentedItems.remove(rented.get());  // 반납 완료 후 목록에서 제거
+//            } else {
+//                System.out.println(returnItemName + "은(는) 존재하지 않는 물품입니다. ");
+//            }
+            Item rented = rentedItems.remove(returnItemName);
+            if(rented != null){
+                rentalService.returnItemAsync(rented, name + "(" + process + ")");
+                System.out.println(returnItemName + "반납 신청 완료 !");
+            }
+            else {
+                System.out.println(returnItemName + "은(는) 존재하지 않는 물품입니다.");
             }
 
         }

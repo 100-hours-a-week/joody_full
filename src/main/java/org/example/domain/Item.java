@@ -9,8 +9,8 @@ public class Item {
     }
 
     // final을 붙여서 불변 객체로 만들기 위함임.
-    private String name;
-    private Type type;
+    private  String name;
+    private  Type type;
     private final AtomicInteger stock;
 
 
