@@ -5,6 +5,7 @@ import org.example.service.RentalService;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 public class Main {
     // 대여, 반납 상수
@@ -105,7 +106,11 @@ public class Main {
 
             // 모든 대여가 끝날 때까지 기다림.
             for(CompletableFuture<Void> f : futures) {
-                f.join();
+                try {
+                    f.join();
+                }catch(CompletionException e) {
+                    System.out.println("비동기 작업 중 에러 발생 :" + e.getCause().getMessage());
+                }
             }
 
             // 대여 물품 신청
@@ -116,7 +121,6 @@ public class Main {
                 System.out.print("어떤 물품을 신청하시겠습니까? (예) 개발도서): ");
                 String requestItem = scanner.nextLine().trim();
 
-                // 비동기로 신청 처리 -> CompletableFuture을 여기서 왜 썼는지!!
                 CompletableFuture<Void> requestFuture = CompletableFuture.runAsync(()-> {
                     try{
                         Thread.sleep(200);
@@ -127,6 +131,7 @@ public class Main {
                 });
                 // 신청 작업이 끝날 때까지 기다림.
                 requestFuture.join();
+
             } else {
                 System.out.println("이용해주셔서 감사합니다! :)");
             }
@@ -145,6 +150,9 @@ public class Main {
 //            } else {
 //                System.out.println(returnItemName + "은(는) 존재하지 않는 물품입니다. ");
 //            }
+
+            // filter로 하게 되면 한명이 수백개, 수천개의 물품을 대여하고자 할 때 리스트 전체를 순회해야 해서 비효율적일 수 있음.
+            // 그래서! HashMap으로 해서 remove를 통해 반납 물품 처리 진행.
             Item rented = rentedItems.remove(returnItemName);
             if(rented != null){
                 rentalService.returnItemAsync(rented, name + "(" + process + ")");
