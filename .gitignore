@@ -60,3 +60,6 @@ src/main/resources/application*.properties
 
 # Spring Boot
 target/
+
+# Uploaded files
+uploads/
