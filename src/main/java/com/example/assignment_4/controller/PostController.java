@@ -41,6 +41,12 @@ public class PostController {
     @GetMapping("/{postId}")
     public ResponseEntity<ApiResponse<?>> getPostDetail(@PathVariable Long postId) {
         var detail = postService.getPostDetail(postId);
+
+        if (detail == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse<>("post_not_found", null));
+        }
+
         return ResponseEntity.ok(new ApiResponse<>("read_success", detail));
     }
 
