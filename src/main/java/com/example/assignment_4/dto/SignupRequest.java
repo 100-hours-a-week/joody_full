@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SignupRequest {
 
+    private Long id;  // ✅ 회원 고유 ID 추가
+
     @NotBlank(message = "email_required")
     @Email(message = "invalid_email_format")
     private String email;
