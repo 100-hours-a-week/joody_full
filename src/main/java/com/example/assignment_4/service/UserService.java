@@ -5,143 +5,104 @@ import com.example.assignment_4.dto.ProfileUpdateRequest;
 import com.example.assignment_4.dto.SignupRequest;
 import com.example.assignment_4.dto.UserInfo;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 @Service
 public class UserService {
 
-    // 간단하게 메모리에 회원 정보를 저장 (DB 대체)
-    private Map<String, Object> userData = new HashMap<>();
-    private boolean deleted = false; // 탈퇴 여부 flag
+    private SignupRequest user; // 한 명의 유저만 관리
+    private boolean loggedIn = false; // 로그인 여부
 
     public UserService() {
-        // 초기 회원 정보 세팅 (이미 회원가입된 상태라고 가정)
-        userData.put("id", 1L);
-        userData.put("email", "example@example.com");
-        userData.put("nickname", "joody");
+        // 테스트용 초기 유저
+        user = new SignupRequest();
+        user.setEmail("example@example.com");
+        user.setPassword("P@ssw0rd!");
+        user.setPassword_check("P@ssw0rd!");
+        user.setNickname("joody");
     }
 
-    /**
-     * 이메일 & 비밀번호 검증 로직
-     */
+    // 로그인 검증
     public boolean validateCredentials(String email, String password) {
-        if (deleted) return false;
-        return Objects.equals(userData.get("email"), email) &&
-                Objects.equals(userData.get("password"), password);
-
-        /* Objects.equals(a, b)는 a나 b가 null이어도 절대 NPE를 안 내고 안전하게 false를 반환함. */
+        return user != null &&
+                Objects.equals(user.getEmail(), email) &&
+                Objects.equals(user.getPassword(), password);
     }
 
-    /**
-     * 로그인 처리 로직
-     */
+    // 로그인 처리
     public LoginResponse login(String email, String password) {
         if (!validateCredentials(email, password)) {
             throw new RuntimeException("invalid_credentials");
         }
-
+        loggedIn = true;
         return new LoginResponse(
-                new UserInfo(1L, (String) userData.get("nickname")),
-                "eyJhbGciOi..." // 예시 토큰
+                new UserInfo(1L, user.getNickname()),
+                "eyJhbGciOi..." // 토큰 예시
         );
     }
 
-    /* 회원가입 */
+    // 회원가입
     public Long signup(SignupRequest req) {
         if (!req.getPassword().equals(req.getPassword_check())) {
-            throw new IllegalArgumentException("invalid_request");
+            throw new IllegalArgumentException("password_mismatch");
         }
 
-        // 중복 이메일/닉네임 체크 (테스트용)
-        if ("example@example.com".equals(req.getEmail()) || "joody".equals(req.getNickname())) {
-            throw new IllegalStateException("duplicate_email_or_nickname");
-        }
-
-        // 신규 데이터 저장
-        userData.put("id", 2L);
-        userData.put("email", req.getEmail());
-        userData.put("nickname", req.getNickname());
-        userData.put("password", req.getPassword());
-        deleted = false; // 새 회원은 탈퇴 상태 아님
-
-        return 2L;
+        // 기존 유저 덮어쓰기
+        user = req;
+        return 1L;
     }
 
-    /* 회원정보 수정 */
+    // 닉네임 수정
     public void updateProfile(ProfileUpdateRequest req) {
-        if (deleted) {
-            throw new RuntimeException("user_not_found");
+        if (!loggedIn || user == null) {
+            throw new RuntimeException("not_logged_in");
         }
-
-        if ("joody".equals(req.getNickname())) {
-            throw new IllegalStateException("duplicate_nickname");
-        }
-
-        // 닉네임 변경
-        userData.put("nickname", req.getNickname());
+        user.setNickname(req.getNickname());
     }
 
-    /* 회원탈퇴 */
-    public void withdrawUser() {
-        // 실제 환경에서는 DB에서 delete or 탈퇴 플래그 변경
-        deleted = true;
+    // 프로필 이미지 업로드
+    public String uploadProfileImage(MultipartFile file) throws IOException {
+        if (user == null) throw new RuntimeException("user_not_found");
+
+        String uploadDir = "uploads";
+        Files.createDirectories(Paths.get(uploadDir));
+        String filename = System.currentTimeMillis() + "_" + file.getOriginalFilename();
+        Path path = Paths.get(uploadDir, filename);
+        Files.write(path, file.getBytes());
+
+        String imageUrl = "http://localhost:8080/uploads/" + filename;
+        user.setProfile_image(imageUrl);
+        return imageUrl;
     }
 
-    /* 회원정보 조회 */
-    public Map<String, Object> getUserProfile() {
-        if (deleted) {
-            return null;
-        }
-        return userData;
-    }
-
-    /*프로필 이미지 업로드*/
-
-    public void updateProfileImage(String imageUrl) {
-        if (deleted) {
-            throw new RuntimeException("user_not_found");
-        }
-        userData.put("profile_image", imageUrl);
-    }
-
-    /*프로필 이미지 삭제*/
+    // 프로필 이미지 삭제
     public void deleteProfileImage() {
-        if (deleted) {
-            throw new RuntimeException("user_not_found");
-        }
-
-        String imageUrl = (String) userData.get("profile_image");
-        if (imageUrl != null) {
-            // 파일 경로 추출
-            String filename = imageUrl.substring(imageUrl.lastIndexOf("/") + 1);
-            Path filePath = Paths.get("uploads", filename);
-            try {
-                Files.deleteIfExists(filePath);
-            } catch (IOException e) {
-                throw new RuntimeException("file_delete_failed");
-            }
-
-            userData.remove("profile_image");
-        }
+        if (user == null) throw new RuntimeException("user_not_found");
+        user.setProfile_image(null);
     }
 
+    // 회원정보 조회
+    public SignupRequest getUserProfile() {
+        if (!loggedIn) throw new RuntimeException("not_logged_in");
+        return user;
+    }
 
+    // 회원 탈퇴
+    public void withdrawUser() {
+        user = null;
+        loggedIn = false;
+    }
 
+    // 비밀번호 변경
     public void updatePassword(String newPassword) {
-        if (deleted) {
-            throw new IllegalArgumentException("user_not_found");
-        }
-
-        // 실제로는 비밀번호 암호화 후 DB 업데이트해야 함
-        userData.put("password", newPassword);
+        if (!loggedIn) throw new RuntimeException("not_logged_in");
+        user.setPassword(newPassword);
+        user.setPassword_check(newPassword);
     }
-
-
 }
