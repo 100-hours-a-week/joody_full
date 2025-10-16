@@ -3,6 +3,7 @@ package com.example.assignment_4.controller;
 import com.example.assignment_4.common.ApiResponse;
 import com.example.assignment_4.dto.CommentCreateRequest;
 import com.example.assignment_4.dto.CommentUpdateRequest;
+import com.example.assignment_4.service.FileService;
 import com.example.assignment_4.service.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -12,9 +13,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
 
 @RestController
@@ -23,6 +21,7 @@ import java.util.Map;
 public class PostController {
 
     private final PostService postService;
+    private final FileService fileService;   // FileService 주입
 
     /* 게시글 목록 조회 */
     @GetMapping
@@ -63,22 +62,13 @@ public class PostController {
                     .body(new ApiResponse<>("invalid_request", null));
         }
 
-        String imageUrl = null;
-        if (image != null && !image.isEmpty()) {
-            String uploadDir = "uploads";
-            Files.createDirectories(Paths.get(uploadDir));
-
-            String filename = System.currentTimeMillis() + "_" + image.getOriginalFilename();
-            Path filePath = Paths.get(uploadDir, filename);
-            Files.write(filePath, image.getBytes());
-
-            imageUrl = "http://localhost:8080/uploads/" + filename;
-        }
-
+        String imageUrl = fileService.uploadFile(image);   // 중복 제거
         Long postId = postService.createPost(title, content, imageUrl);
+
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponse<>("create_success", Map.of("post_id", postId)));
     }
+
 
     /* 게시글 수정 */
     @PutMapping(value = "/{postId}", consumes = "multipart/form-data")
@@ -88,17 +78,10 @@ public class PostController {
             @RequestPart("content") String content,
             @RequestPart(value = "image", required = false) MultipartFile image
     ) throws IOException {
-        String imageUrl = null;
-        if (image != null && !image.isEmpty()) {
-            String uploadDir = "uploads";
-            Files.createDirectories(Paths.get(uploadDir));
-            String filename = System.currentTimeMillis() + "_" + image.getOriginalFilename();
-            Path filePath = Paths.get(uploadDir, filename);
-            Files.write(filePath, image.getBytes());
-            imageUrl = "http://localhost:8080/uploads/" + filename;
-        }
 
+        String imageUrl = fileService.uploadFile(image);   //  공통 로직 사용
         postService.updatePost(postId, title, content, imageUrl);
+
         return ResponseEntity.ok(new ApiResponse<>("update_success", Map.of("post_id", postId)));
     }
 
