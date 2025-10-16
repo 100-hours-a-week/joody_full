@@ -17,20 +17,22 @@ public class PostService {
     private final Map<Long, List<CommentSummary>> comments = new HashMap<>();
     // 사용자별 좋아요 기록 저장용 (postId 기준)
     private final Map<Long, Set<Long>> postLikesByUser = new HashMap<>();
+
+    private long postSequence = 1L;  // postSequence
     private long commentSequence = 1;
 
     public PostService() {
-        // 테스트용 데이터 생성
+        // 테스트용 초기 데이터
         for (int i = 1; i <= 50; i++) {
             posts.add(new PostSummary(
-                    (long) i,
+                    postSequence++,   // postSequence로 ID 관리
                     "게시글 제목 " + i,
                     i % 2 == 0 ? "joody" : "joo",
                     new Random().nextInt(500),
                     new Random().nextInt(100),
                     new Random().nextInt(20),
                     LocalDateTime.now().minusDays(i).toString(),
-                    "테스트용 본문 내용입니다. 게시글 번호 " + i   // ✅ content 인자 추가
+                    "테스트용 본문 내용입니다. 게시글 번호 " + i
             ));
         }
     }
@@ -113,13 +115,15 @@ public class PostService {
 
     /* 게시글 작성 */
     public Long createPost(String title, String content, String imageUrl) {
-        // id는 간단하게 현재 리스트 크기 + 1로 처리 (DB라면 auto_increment)
-        long newId = posts.size() + 1;
+//        // id는 간단하게 현재 리스트 크기 + 1로 처리 (DB라면 auto_increment)
+//        long newId = posts.size() + 1;
+
+        long newId = postSequence++;   // size() 대신 시퀀스 증가
 
         PostSummary newPost = new PostSummary(
                 newId,
                 title,
-                "joo",
+                "joo", // 나중에 로그인 사용자로 대체 가능
                 0,
                 0,
                 0,
