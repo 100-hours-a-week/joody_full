@@ -1,10 +1,7 @@
 package com.example.assignment_4.controller;
 
 import com.example.assignment_4.common.ApiResponse;
-import com.example.assignment_4.dto.LoginRequest;
-import com.example.assignment_4.dto.LoginResponse;
-import com.example.assignment_4.dto.ProfileUpdateRequest;
-import com.example.assignment_4.dto.SignupRequest;
+import com.example.assignment_4.dto.*;
 import com.example.assignment_4.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -99,10 +96,9 @@ public class UserController {
     @Operation(summary = "비밀번호 수정", description = "현재 로그인된 사용자의 비밀번호를 변경합니다.")
     @PutMapping("/password")
     public ResponseEntity<ApiResponse<Void>> updatePassword(
-            @RequestBody Map<String, String> body
+            @Valid @RequestBody PasswordRequest request
     ) {
-        String newPassword = body.get("password");
-        userService.updatePassword(newPassword);
+        userService.updatePassword(request.getPassword());
         return ResponseEntity.ok(new ApiResponse<>("update_success", null));
     }
 }
