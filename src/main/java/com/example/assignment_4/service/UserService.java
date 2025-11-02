@@ -1,51 +1,23 @@
 package com.example.assignment_4.service;
 
-import com.example.assignment_4.dto.LoginResponse;
-import com.example.assignment_4.dto.ProfileUpdateRequest;
-import com.example.assignment_4.dto.SignupRequest;
-import com.example.assignment_4.dto.UserInfo;
+import com.example.assignment_4.dto.*;
+import com.example.assignment_4.entity.User;
+import com.example.assignment_4.repository.UserRepository;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Objects;
+import java.nio.file.*;
+import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
+@Transactional
 public class UserService {
 
-    private SignupRequest user; // 한 명의 유저만 관리
-    private boolean loggedIn = false; // 로그인 여부
-
-    public UserService() {
-        // 테스트용 초기 유저
-        user = new SignupRequest();
-        user.setEmail("example@example.com");
-        user.setPassword("P@ssw0rd!");
-        user.setPassword_check("P@ssw0rd!");
-        user.setNickname("joody");
-    }
-
-    // 로그인 검증
-    public boolean validateCredentials(String email, String password) {
-        return user != null &&
-                Objects.equals(user.getEmail(), email) &&
-                Objects.equals(user.getPassword(), password);
-    }
-
-    // 로그인 처리
-    public LoginResponse login(String email, String password) {
-        if (!validateCredentials(email, password)) {
-            throw new RuntimeException("invalid_credentials");
-        }
-        loggedIn = true;
-        return new LoginResponse(
-                new UserInfo(1L, user.getNickname()),
-                "eyJhbGciOi..." // 토큰 예시
-        );
-    }
+    private final UserRepository userRepository;
 
     // 회원가입
     public Long signup(SignupRequest req) {
@@ -53,22 +25,50 @@ public class UserService {
             throw new IllegalArgumentException("password_mismatch");
         }
 
-        // 기존 유저 덮어쓰기
-        user = req;
-        return 1L;
+        if (userRepository.existsByEmail(req.getEmail())) {
+            throw new IllegalArgumentException("duplicate_email");
+        }
+
+        User user = User.builder()
+                .email(req.getEmail())
+                .password(req.getPassword())
+                .nickname(req.getNickname())
+                .profileImage(req.getProfile_image())
+                .build();
+
+        userRepository.save(user);
+        return user.getId();
+    }
+
+    // 로그인
+    public LoginResponse login(String email, String password) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("invalid_credentials"));
+
+        if (!user.getPassword().equals(password)) {
+            throw new RuntimeException("invalid_credentials");
+        }
+
+        // (JWT 발급 로직은 생략)
+        return new LoginResponse(
+                new UserInfo(user.getId(), user.getNickname()),
+                "eyJhbGciOi..." // 토큰 예시
+        );
     }
 
     // 닉네임 수정
-    public void updateProfile(ProfileUpdateRequest req) {
-        if (!loggedIn || user == null) {
-            throw new RuntimeException("not_logged_in");
-        }
+    public void updateProfile(Long userId, ProfileUpdateRequest req) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("user_not_found"));
+
         user.setNickname(req.getNickname());
+        userRepository.save(user);
     }
 
-    // 프로필 이미지 업로드
-    public String uploadProfileImage(MultipartFile file) throws IOException {
-        if (user == null) throw new RuntimeException("user_not_found");
+     //프로필 이미지 업로드
+    public String uploadProfileImage(Long userId, MultipartFile file) throws IOException {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("user_not_found"));
 
         String uploadDir = "uploads";
         Files.createDirectories(Paths.get(uploadDir));
@@ -77,32 +77,37 @@ public class UserService {
         Files.write(path, file.getBytes());
 
         String imageUrl = "http://localhost:8080/uploads/" + filename;
-        user.setProfile_image(imageUrl);
+        user.setProfileImage(imageUrl);
+        userRepository.save(user);
+
         return imageUrl;
     }
 
     // 프로필 이미지 삭제
-    public void deleteProfileImage() {
-        if (user == null) throw new RuntimeException("user_not_found");
-        user.setProfile_image(null);
+    public void deleteProfileImage(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("user_not_found"));
+        user.setProfileImage(null);
+        userRepository.save(user);
     }
 
     // 회원정보 조회
-    public SignupRequest getUserProfile() {
-        if (!loggedIn) throw new RuntimeException("not_logged_in");
-        return user;
+    public UserInfo getUserProfile(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("user_not_found"));
+        return new UserInfo(user.getId(), user.getNickname());
     }
 
     // 회원 탈퇴
-    public void withdrawUser() {
-        user = null;
-        loggedIn = false;
+    public void withdrawUser(Long userId) {
+        userRepository.deleteById(userId);
     }
 
     // 비밀번호 변경
-    public void updatePassword(String newPassword) {
-        if (!loggedIn) throw new RuntimeException("not_logged_in");
+    public void updatePassword(Long userId, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("user_not_found"));
         user.setPassword(newPassword);
-        user.setPassword_check(newPassword);
+        userRepository.save(user);
     }
 }
