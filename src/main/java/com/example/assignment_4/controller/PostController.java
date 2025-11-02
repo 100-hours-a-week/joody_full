@@ -146,7 +146,10 @@
 package com.example.assignment_4.controller;
 
 import com.example.assignment_4.common.ApiResponse;
+import com.example.assignment_4.dto.CommentCreateRequest;
+import com.example.assignment_4.dto.CommentUpdateRequest;
 import com.example.assignment_4.dto.PostRequest;
+import com.example.assignment_4.service.CommentService;
 import com.example.assignment_4.service.FileService;
 import com.example.assignment_4.service.LikeService;
 import com.example.assignment_4.service.PostService;
@@ -171,6 +174,7 @@ public class PostController {
     private final PostService postService;
     private final FileService fileService;
     private final LikeService likeService;
+    private final CommentService commentService;
 
     /** ✅ 게시글 목록 조회 */
     @Operation(summary = "게시글 목록 조회", description = "페이지네이션, 정렬, 검색을 포함한 게시글 목록을 조회합니다.")
@@ -230,12 +234,63 @@ public class PostController {
         return ResponseEntity.ok(new ApiResponse<>("delete_success", null));
     }
 
+    /** ✅ 댓글 작성 */
+    @Operation(summary = "댓글 작성", description = "특정 게시글에 댓글을 작성합니다.")
+    @PostMapping("/{postId}/comments")
+    public ResponseEntity<ApiResponse<?>> createComment(
+            @PathVariable Long postId,
+            @RequestParam Long userId,
+            @Valid @RequestBody CommentCreateRequest request
+    ) {
+        Long commentId = commentService.addComment(postId, userId, request.getContent());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ApiResponse<>("comment_created", Map.of("comment_id", commentId)));
+    }
+
+    /** ✅ 댓글 목록 조회 */
+    @Operation(summary = "댓글 목록 조회", description = "특정 게시글의 댓글 목록을 조회합니다.")
+    @GetMapping("/{postId}/comments")
+    public ResponseEntity<ApiResponse<?>> getCommentList(
+            @PathVariable Long postId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String order,
+            @RequestParam(required = false) String keyword
+    ) {
+        var data = commentService.getComments(postId, page, size, sortBy, order, keyword);
+        return ResponseEntity.ok(new ApiResponse<>("read_success", data));
+    }
+
+    /** ✅ 댓글 수정 */
+    @Operation(summary = "댓글 수정", description = "특정 게시글의 댓글 내용을 수정합니다.")
+    @PutMapping("/{postId}/comments/{commentId}")
+    public ResponseEntity<ApiResponse<?>> updateComment(
+            @PathVariable Long commentId,
+            @Valid @RequestBody CommentUpdateRequest request
+    ) {
+        commentService.updateComment(commentId, request.getContent());
+        return ResponseEntity.ok(new ApiResponse<>("update_success", null));
+    }
+
+    /** ✅ 댓글 삭제 */
+    @Operation(summary = "댓글 삭제", description = "특정 게시글의 댓글을 삭제합니다.")
+    @DeleteMapping("/{postId}/comments/{commentId}")
+    public ResponseEntity<ApiResponse<?>> deleteComment(
+            @PathVariable Long commentId
+    ) {
+        commentService.deleteComment(commentId);
+        return ResponseEntity.ok(new ApiResponse<>("comment_deleted", null));
+    }
+
     /** ✅ 좋아요 토글 */
     @Operation(summary = "좋아요 토글", description = "특정 게시글에 대한 좋아요를 추가하거나 취소합니다.")
     @PostMapping("/{postId}/likes/toggle")
-    public ResponseEntity<ApiResponse<?>> toggleLike(@PathVariable Long postId) {
-        Long userId = 1L; // TODO: JWT 로그인 연동 후 수정 예정
-        Map<String, Object> result = likeService.toggleLike(postId, userId);
+    public ResponseEntity<ApiResponse<?>> toggleLike(
+            @PathVariable Long postId,
+            @RequestParam Long userId   // ← 이걸 꼭 받아야 Postman에서 테스트 가능해
+    ) {
+        var result = likeService.toggleLike(postId, userId);
         String message = (boolean) result.get("liked") ? "like_added" : "like_removed";
         return ResponseEntity.ok(new ApiResponse<>(message, result));
     }
