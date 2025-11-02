@@ -1,10 +1,12 @@
 package com.example.assignment_4.dto;
 
+import com.example.assignment_4.entity.Post;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Collections;
 import java.util.List;
 
 @Data
@@ -39,4 +41,22 @@ public class PostDetail {
 
     @Schema(description = "댓글 목록", implementation = CommentSummary.class)
     private List<CommentSummary> comments;
+
+    /**
+     * ✅ Entity → DTO 변환용 정적 메서드
+     * Post 엔티티를 PostDetail DTO로 변환한다.
+     */
+    public static PostDetail from(Post post) {
+        return new PostDetail(
+                post.getId(),
+                post.getTitle(),
+                post.getUser() != null ? post.getUser().getNickname() : "탈퇴한 사용자",
+                post.getCreatedAt() != null ? post.getCreatedAt().toString() : null,
+                post.getContent(),
+                post.getViewCount(),
+                post.getLikeCount(),
+                post.getCommentCount(),
+                Collections.emptyList() // 댓글 리스트는 CommentService에서 별도 주입 예정
+        );
+    }
 }
