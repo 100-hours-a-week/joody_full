@@ -28,6 +28,10 @@ public class UserService {
         if (userRepository.existsByEmail(req.getEmail())) {
             throw new IllegalArgumentException("duplicate_email");
         }
+        // 닉네임 중복 체크 추가
+        if (userRepository.existsByNickname(req.getNickname())) {
+            throw new IllegalArgumentException("duplicate_nickname");
+        }
 
         User user = User.builder()
                 .email(req.getEmail())
@@ -60,6 +64,11 @@ public class UserService {
     public void updateProfile(Long userId, ProfileUpdateRequest req) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("user_not_found"));
+
+        // 닉네임 중복 체크 추가
+        if (userRepository.existsByNickname(req.getNickname())) {
+            throw new IllegalArgumentException("duplicate_nickname");
+        }
 
         user.setNickname(req.getNickname());
         userRepository.save(user);
@@ -104,9 +113,15 @@ public class UserService {
     }
 
     // 비밀번호 변경
-    public void updatePassword(Long userId, String newPassword) {
+    public void updatePassword(Long userId, String newPassword, String newPassword_check) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("user_not_found"));
+
+        // ✅ 2새 비밀번호 일치 확인
+        if (!newPassword.equals(newPassword_check)) {
+            throw new IllegalArgumentException("password_mismatch");
+        }
+
         user.setPassword(newPassword);
         userRepository.save(user);
     }
