@@ -84,13 +84,23 @@ public class UserController {
         return ResponseEntity.ok(new ApiResponse<>("withdraw_success", null));
     }
 
+    @Operation(summary = "비밀번호 변경", description = "새 비밀번호를 입력하고 확인 후 변경합니다.")
     @PutMapping("/{userId}/password")
-    @Operation(summary = "비밀번호 변경", description = "사용자의 비밀번호를 변경합니다.")
-    public ResponseEntity<ApiResponse<Void>> updatePassword(
+    public ResponseEntity<ApiResponse<?>> updatePassword(
             @PathVariable Long userId,
             @Valid @RequestBody PasswordRequest request
     ) {
-        userService.updatePassword(userId, request.getPassword());
-        return ResponseEntity.ok(new ApiResponse<>("update_success", null));
+        try {
+            userService.updatePassword(
+                    userId,
+                    request.getNewPassword(),
+                    request.getNewPassword_check()
+            );
+            return ResponseEntity.ok(new ApiResponse<>("password_update_success", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(e.getMessage(), null));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse<>(e.getMessage(), null));
+        }
     }
 }
