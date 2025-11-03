@@ -236,10 +236,10 @@ public class PostController {
 
     /** ✅ 댓글 작성 */
     @Operation(summary = "댓글 작성", description = "특정 게시글에 댓글을 작성합니다.")
-    @PostMapping("/{postId}/comments")
+    @PostMapping("/{postId}/comments/{userId}")
     public ResponseEntity<ApiResponse<?>> createComment(
             @PathVariable Long postId,
-            @RequestParam Long userId,
+            @PathVariable Long userId,
             @Valid @RequestBody CommentCreateRequest request
     ) {
         Long commentId = commentService.addComment(postId, userId, request.getContent());
@@ -288,7 +288,7 @@ public class PostController {
     @PostMapping("/{postId}/likes/toggle")
     public ResponseEntity<ApiResponse<?>> toggleLike(
             @PathVariable Long postId,
-            @RequestParam Long userId   // ← 이걸 꼭 받아야 Postman에서 테스트 가능해
+            @RequestParam Long userId   //이걸 꼭 받아야 Postman에서 테스트 가능해
     ) {
         var result = likeService.toggleLike(postId, userId);
         String message = (boolean) result.get("liked") ? "like_added" : "like_removed";
