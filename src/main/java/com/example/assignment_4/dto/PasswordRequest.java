@@ -15,15 +15,15 @@ import lombok.NoArgsConstructor;
 public class PasswordRequest {
 
     @Schema(description = "새 비밀번호", example = "SecureP@ssw0rd!", minLength = 8, maxLength = 20)
-    @NotBlank(message = "password_required")
+    @NotBlank(message = "newPassword_required")
     @Size(min = 8, max = 20, message = "password_length_8_20")
     @Pattern(
             regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]).+$",
             message = "password_invalid_format"
     )
-    private String password;
+    private String newPassword;
 
     @Schema(description = "비밀번호 확인", example = "SecureP@ssw0rd!")
-    @NotBlank(message = "password_check_required")
-    private String password_check;
+    @NotBlank(message = "newPassword_check_required")
+    private String newPassword_check;
 }
