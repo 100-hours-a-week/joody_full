@@ -27,7 +27,7 @@ public class User {
     @Column(nullable = false, length = 255)
     private String nickname;
 
-    @Column(name = "profile_image", length = 255)
+    @Column(name = "profile_image", columnDefinition = "TEXT")
     private String profileImage;
 
     @CreationTimestamp
