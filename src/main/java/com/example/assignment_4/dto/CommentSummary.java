@@ -17,18 +17,30 @@ public class CommentSummary {
     @Schema(description = "작성자 닉네임", example = "joody")
     private String author;
 
+    @Schema(description = "작성자 프로필 이미지 URL")
+    private String authorProfileImage;
+
     @Schema(description = "댓글 내용", example = "좋은 글이에요!")
     private String content;
 
     @Schema(description = "작성일", example = "2025-11-03T12:30:00")
     private String createdAt;
 
+    @Schema(description = "수정일", example = "2025-11-03T14:10:00")
+    private String updatedAt;
+
     public static CommentSummary from(Comment comment) {
         return CommentSummary.builder()
                 .id(comment.getId())
                 .author(comment.getUser().getNickname())
+                .authorProfileImage(comment.getUser().getProfileImage()) // ✅ 추가!
                 .content(comment.getContent())
                 .createdAt(comment.getCreatedAt().toString())
+                .updatedAt(
+                        comment.getUpdatedAt() != null
+                                ? comment.getUpdatedAt().toString()
+                                : null
+                )
                 .build();
     }
 }
