@@ -14,4 +14,8 @@ public class UserInfo {
 
     @Schema(description = "닉네임", example = "joody")
     private String nickname;
+
+
+    @Schema(description = "프로필 이미지 URL", example = "http://localhost:8080/images/profile/1.png")
+    private String profileImage;  //
 }
