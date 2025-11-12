@@ -24,21 +24,36 @@ public class UserController {
 
     private final UserService userService;
 
-    @PostMapping("/signup")
-    @Operation(summary = "회원가입", description = "새로운 사용자를 등록합니다.")
-    public ResponseEntity<ApiResponse<Long>> signup(@Valid @RequestBody SignupRequest req) {
-        Long userId = userService.signup(req);
+    @PostMapping(value = "/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "회원가입", description = "이메일, 비밀번호, 닉네임, 프로필 이미지를 함께 전송하여 회원가입합니다.")
+    public ResponseEntity<ApiResponse<Long>> signup(
+            @Valid @RequestPart("user") SignupRequest req,
+            @RequestPart(value = "profile_image", required = false) MultipartFile file
+    ) throws Exception {
+
+        Long userId = userService.signupWithImage(req, file);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ApiResponse<>("register_success", userId));
     }
 
 
+
     @PostMapping("/login")
     @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인합니다.")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest req) {
-        LoginResponse response = userService.login(req.getEmail(), req.getPassword());
-        return ResponseEntity.ok(new ApiResponse<>("login_success", response));
+        try {
+            LoginResponse response = userService.login(req.getEmail(), req.getPassword());
+            return ResponseEntity.ok(new ApiResponse<>("login_success", response));
+        } catch (RuntimeException e) {
+            if ("emailOrPassword_mismatch".equals(e.getMessage())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new ApiResponse<>("emailOrPassword_mismatch", null));
+            }
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("login_failed", null));
+        }
     }
+
 
     @PutMapping("/{userId}/profile")
     @Operation(summary = "닉네임 수정", description = "회원 닉네임을 변경합니다.")
