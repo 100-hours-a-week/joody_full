@@ -157,12 +157,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @RequiredArgsConstructor
@@ -176,18 +178,27 @@ public class PostController {
     private final LikeService likeService;
     private final CommentService commentService;
 
-    /** ✅ 게시글 목록 조회 */
-    @Operation(summary = "게시글 목록 조회", description = "페이지네이션, 정렬, 검색을 포함한 게시글 목록을 조회합니다.")
+    /** ✅ 게시글 목록 조회 (커서 기반 인피니티 스크롤) */
     @GetMapping
+    @Operation(summary = "게시글 목록 조회", description = "커서 기반 인피니티 스크롤 형태로 게시글 목록을 조회합니다.")
     public ResponseEntity<ApiResponse<?>> getPostList(
-            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(required = false) String cursorCreatedAt,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createdAt") String sort,
-            @RequestParam(defaultValue = "desc") String direction,
             @RequestParam(required = false) String keyword
     ) {
-        var data = postService.getPostList(page, size, sort, direction, keyword);
-        return ResponseEntity.ok(new ApiResponse<>("read_success", data));
+        // 🔹 String → LocalDateTime 변환 (직접 처리)
+        LocalDateTime cursor = null;
+        try {
+            if (cursorCreatedAt != null && !cursorCreatedAt.isBlank()) {
+                cursor = LocalDateTime.parse(cursorCreatedAt); // "2025-11-08T12:30:00"
+            }
+        } catch (Exception e) {
+            // 변환 실패 시 null로 처리 (첫 페이지로 인식)
+            cursor = null;
+        }
+
+        var data = postService.getPostList(cursor, size, keyword);
+        return ResponseEntity.ok(new ApiResponse<>("post_list_success", data));
     }
 
     /** ✅ 게시글 상세 조회 */
@@ -218,9 +229,13 @@ public class PostController {
             @PathVariable Long postId,
             @Valid @ModelAttribute PostRequest request
     ) throws IOException {
-        String imageUrl = fileService.uploadFile(request.getImage());
-        postService.updatePost(postId, request.getTitle(), request.getContent(), imageUrl);
-        return ResponseEntity.ok(new ApiResponse<>("update_success", Map.of("post_id", postId)));
+        String imageUrl = null;
+        if (request.getImage() != null && !request.getImage().isEmpty()) {
+            imageUrl = fileService.uploadFile(request.getImage());
+        }
+
+        Long updatedPostId = postService.updatePost(postId, request.getTitle(), request.getContent(), imageUrl);
+        return ResponseEntity.ok(new ApiResponse<>("update_success", Map.of("post_id", updatedPostId)));
     }
 
     /** ✅ 게시글 삭제 */
@@ -266,6 +281,7 @@ public class PostController {
     @Operation(summary = "댓글 수정", description = "특정 게시글의 댓글 내용을 수정합니다.")
     @PutMapping("/{postId}/comments/{commentId}")
     public ResponseEntity<ApiResponse<?>> updateComment(
+            @PathVariable Long postId,
             @PathVariable Long commentId,
             @Valid @RequestBody CommentUpdateRequest request
     ) {
@@ -277,6 +293,7 @@ public class PostController {
     @Operation(summary = "댓글 삭제", description = "특정 게시글의 댓글을 삭제합니다.")
     @DeleteMapping("/{postId}/comments/{commentId}")
     public ResponseEntity<ApiResponse<?>> deleteComment(
+            @PathVariable Long postId,     // 사용하지 않더라도 받아야 함
             @PathVariable Long commentId
     ) {
         commentService.deleteComment(commentId);
