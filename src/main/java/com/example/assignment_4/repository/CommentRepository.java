@@ -10,6 +10,6 @@ import java.util.List;
 @Repository
 public interface CommentRepository extends JpaRepository<Comment, Long> {
 
-    // 특정 게시글에 달린 모든 댓글 조회
-    List<Comment> findByPost(Post post);
+    List<Comment> findByPostAndDeletedAtIsNullAndUserDeletedAtIsNull(Post post);
+
 }
