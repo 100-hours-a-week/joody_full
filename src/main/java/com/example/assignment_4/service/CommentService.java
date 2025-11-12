@@ -60,7 +60,7 @@ public class CommentService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new NoSuchElementException("post_not_found"));
 
-        List<Comment> allComments = commentRepository.findByPost(post);
+        List<Comment> allComments = commentRepository.findByPostAndDeletedAtIsNullAndUserDeletedAtIsNull(post);
 
         // 🔍 검색
         if (keyword != null && !keyword.isBlank()) {
@@ -109,8 +109,11 @@ public class CommentService {
         if (newContent == null || newContent.isBlank())
             throw new IllegalArgumentException("invalid_request");
 
-        comment.setContent(newContent);
-        comment.setUpdatedAt(LocalDateTime.now());
+        // ✅ 내용이 변경된 경우만 수정 처리
+        if (!newContent.equals(comment.getContent())) {
+            comment.setContent(newContent);
+            comment.setUpdatedAt(LocalDateTime.now());
+        }
     }
 
     /**
@@ -120,7 +123,8 @@ public class CommentService {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new NoSuchElementException("comment_not_found"));
 
-        comment.setDeletedAt(LocalDateTime.now());
+        // ✅ soft delete (자동으로 deleted_at이 채워짐)
+        commentRepository.delete(comment);
 
         // 댓글 수 감소
         Post post = comment.getPost();
