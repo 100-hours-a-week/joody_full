@@ -4,10 +4,13 @@ import com.example.assignment_4.dto.PostDetail;
 import com.example.assignment_4.dto.PostSummary;
 import com.example.assignment_4.entity.Post;
 import com.example.assignment_4.entity.User;
+import com.example.assignment_4.repository.CommentRepository;
 import com.example.assignment_4.repository.PostRepository;
 import com.example.assignment_4.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -25,62 +28,64 @@ public class PostService {
     /**
      * ✅ 게시글 단일 조회 (LikeService, CommentService 등에서 사용)
      */
-    public Optional<Post> findPost(Long postId) {
+    public Optional<Post> findByPostAndDeletedFalse(Long postId) {
         return postRepository.findById(postId);
     }
 
     /**
-     * ✅ 게시글 목록 조회 (검색 + 정렬 + 페이징)
+     * ✅ 게시글 목록 조회 (커서 기반 인피니티 스크롤)
      */
-    public Map<String, Object> getPostList(int page, int size, String sort, String direction, String keyword) {
-        List<Post> allPosts = postRepository.findAll();
+    public Map<String, Object> getPostList(LocalDateTime cursorCreatedAt, int size, String keyword) {
+        // 1️⃣ DB에서 커서 기준 다음 게시글 가져오기
+        Pageable pageable = PageRequest.of(0, size);
+        List<Post> posts = postRepository.findNextPosts(cursorCreatedAt, pageable);
 
-        // 🔍 검색 필터
-        List<Post> filtered = allPosts.stream()
-                .filter(p -> keyword == null || keyword.isBlank()
-                        || p.getTitle().contains(keyword)
-                        || (p.getUser() != null && p.getUser().getNickname().contains(keyword)))
+        // 2️⃣ 검색어 필터링 (옵션)
+        if (keyword != null && !keyword.isBlank()) {
+            posts = posts.stream()
+                    .filter(p -> p.getTitle().contains(keyword)
+                            || (p.getUser() != null && p.getUser().getNickname().contains(keyword)))
+                    .collect(Collectors.toList());
+        }
+
+        // 3️⃣ DTO 변환
+        List<PostSummary> summaries = posts.stream()
+                .map(post -> {
+                    try {
+                        return PostSummary.from(post);
+                    } catch (Exception e) {
+                        return PostSummary.fromDeletedUser(post);
+                    }
+                })
                 .collect(Collectors.toList());
 
-        // 🔢 정렬
-        Comparator<Post> comparator = switch (sort) {
-            case "views" -> Comparator.comparing(Post::getViewCount);
-            case "likes" -> Comparator.comparing(Post::getLikeCount);
-            case "createdAt" -> Comparator.comparing(Post::getCreatedAt);
-            default -> Comparator.comparing(Post::getId);
-        };
-        if ("desc".equalsIgnoreCase(direction)) comparator = comparator.reversed();
-        filtered.sort(comparator);
+        // 4️⃣ 다음 커서 (마지막 게시글의 createdAt)
+        LocalDateTime nextCursor = summaries.isEmpty()
+                ? null
+                : summaries.get(summaries.size() - 1).getCreatedAt();
 
-        // 📄 페이징
-        int totalElements = filtered.size();
-        int totalPages = (int) Math.ceil((double) totalElements / size);
-        int fromIndex = Math.min((page - 1) * size, totalElements);
-        int toIndex = Math.min(fromIndex + size, totalElements);
-        List<Post> paginated = filtered.subList(fromIndex, toIndex);
+        // 5️⃣ 다음 페이지 존재 여부
+        boolean hasNext = posts.size() == size;
 
-        // 📦 DTO 변환
-        List<PostSummary> summaries = paginated.stream()
-                .map(PostSummary::from)
-                .collect(Collectors.toList());
-
-        // 결과 맵 구성
+        // 6️⃣ 응답 데이터 구성
         Map<String, Object> result = new HashMap<>();
-        result.put("page", page);
-        result.put("size", size);
-        result.put("totalPages", totalPages);
-        result.put("totalElements", totalElements);
         result.put("content", summaries);
+        result.put("nextCursor", nextCursor);
+        result.put("hasNext", hasNext);
+
         return result;
     }
+
 
     /**
      * ✅ 게시글 상세 조회 (+조회수 증가)
      */
     public PostDetail getPostDetail(Long postId) {
-        Post post = postRepository.findById(postId)
+        Post post = postRepository.findPostWithUser(postId)
                 .orElseThrow(() -> new NoSuchElementException("post_not_found"));
+
         post.setViewCount(post.getViewCount() + 1);
+
         return PostDetail.from(post);
     }
 
@@ -103,16 +108,26 @@ public class PostService {
     /**
      * ✅ 게시글 수정
      */
-    public void updatePost(Long postId, String title, String content, String imageUrl) {
+    public Long updatePost(Long postId, String title, String content, String imageUrl) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new NoSuchElementException("post_not_found"));
+
         if (title.length() > 26) throw new IllegalArgumentException("invalid_request");
+
         post.setTitle(title);
         post.setContent(content);
-        post.setPostImage(imageUrl);
-        post.setUpdatedAt(LocalDateTime.now());
-    }
 
+        // ✅ 새 이미지가 있을 경우에만 변경
+        if (imageUrl != null && !imageUrl.isBlank()) {
+            post.setPostImage(imageUrl);
+        }
+
+        post.setUpdatedAt(LocalDateTime.now());
+        postRepository.save(post);
+
+        // ✅ 수정된 게시글 ID 반환
+        return post.getId();
+    }
     /**
      * ✅ 게시글 삭제 (soft/hard)
      */
@@ -122,4 +137,5 @@ public class PostService {
         if (hard) postRepository.delete(post);
         else post.setDeletedAt(LocalDateTime.now());
     }
+
 }
