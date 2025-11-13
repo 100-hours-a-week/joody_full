@@ -12,6 +12,9 @@ public class UserInfo {
     @Schema(description = "사용자 ID", example = "1")
     private Long id;
 
+    @Schema(description = "이메일", example = "joody@example.com") 
+    private String email;
+
     @Schema(description = "닉네임", example = "joody")
     private String nickname;
 
