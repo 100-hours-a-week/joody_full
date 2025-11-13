@@ -84,7 +84,7 @@ public class UserService {
 
         // (JWT 발급 로직은 생략)
         return new LoginResponse(
-                new UserInfo(user.getId(), user.getNickname(),user.getProfileImage()),
+                new UserInfo(user.getId(), user.getEmail(), user.getNickname(),user.getProfileImage()),
                 "eyJhbGciOi..." // 토큰 예시
         );
     }
@@ -165,7 +165,7 @@ public class UserService {
     public UserInfo getUserProfile(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("user_not_found"));
-        return new UserInfo(user.getId(), user.getNickname(), user.getProfileImage());
+        return new UserInfo(user.getId(), user.getEmail(), user.getNickname(), user.getProfileImage());
     }
 
     // 회원 탈퇴
