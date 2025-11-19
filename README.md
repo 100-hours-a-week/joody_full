@@ -31,6 +31,7 @@
 <br />
 
 ### 🔥 1. 전체 아키텍처
+```plaintext
 Client (HTML/JS)
      ↓  fetch API
 REST API (Spring Boot)
@@ -38,24 +39,27 @@ REST API (Spring Boot)
 JPA/Hibernate
      ↓
 MySQL
+```
 <br />
 
 ### 🔐 2. Spring Security + JWT 인증/인가
-✔ Access Token + Refresh Token 구조
-구분	전달 방식	설명
-Access Token	Authorization 헤더 (Bearer)	API 요청 시 인증
-Refresh Token	HttpOnly Cookie	XSS 방어, 자동 재발급
+**✔ Access Token + Refresh Token 구조**
+| 구분                | 전달 방식                     | 설명             |
+| ----------------- | ------------------------- | -------------- |
+| **Access Token**  | Authorization 헤더 (Bearer) | API 요청 시 인증    |
+| **Refresh Token** | HttpOnly Cookie           | XSS 방어, 자동 재발급 |
+
 ✔ 주요 보안 구성 요소
 
-CustomUserDetails — UserDetails 구현
+- CustomUserDetails — UserDetails 구현
 
-CustomUserDetailsService — email/userId 기반 조회
+- CustomUserDetailsService — email/userId 기반 조회
 
-JwtTokenProvider — JWT 생성·검증·파싱
+- JwtTokenProvider — JWT 생성·검증·파싱
 
-JwtAuthenticationFilter — 요청마다 JWT 인증 처리
+- JwtAuthenticationFilter — 요청마다 JWT 인증 처리
 
-SecurityConfig — 필터 체인, 인증/인가 규칙, CORS 설정
+- SecurityConfig — 필터 체인, 인증/인가 규칙, CORS 설정
 <br />
 
 **✔ 인증 흐름 요약**
