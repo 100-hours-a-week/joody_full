@@ -12,6 +12,6 @@ public class LoginResponse {
     @Schema(description = "로그인한 사용자 정보")
     private UserInfo user;
 
-    @Schema(description = "JWT 토큰", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
-    private String token;
+    @Schema(description = "JWT 엑세스 토큰", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+    private String accessToken;
 }
