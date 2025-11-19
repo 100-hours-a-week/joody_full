@@ -1,5 +1,5 @@
-##🚀 Backend — Spring Boot REST API & JWT Security##
-###📌 프로젝트 개요###
+## 🚀 Backend — Spring Boot REST API & JWT Security
+### 📌 프로젝트 개요
 
 **아무말 대잔치(Backend)**
 사용자 인증부터 게시글/댓글/프로필 관리까지 제공하는 커뮤니티 서비스 백엔드입니다.
@@ -14,8 +14,8 @@
 <br />
 <br />
 
-##🛠 기술 스택
-###Backend
+## 🛠 기술 스택
+### Backend
 - Spring Boot 3.x
 - Spring Security
 - JPA / Hibernate
@@ -24,13 +24,13 @@
 - Lombok
 <br />
 
-###Tools
+### Tools
 - Swagger UI
 - Postman
 - Git / GitHub
 <br />
 
-###🔥 1. 전체 아키텍처
+### 🔥 1. 전체 아키텍처
 Client (HTML/JS)
      ↓  fetch API
 REST API (Spring Boot)
@@ -40,7 +40,7 @@ JPA/Hibernate
 MySQL
 <br />
 
-###🔐 2. Spring Security + JWT 인증/인가
+### 🔐 2. Spring Security + JWT 인증/인가
 ✔ Access Token + Refresh Token 구조
 구분	전달 방식	설명
 Access Token	Authorization 헤더 (Bearer)	API 요청 시 인증
@@ -77,7 +77,7 @@ SecurityConfig — 필터 체인, 인증/인가 규칙, CORS 설정
 <br />
 
 
-###🧩 3. REST API 주요 기능
+### 🧩 3. REST API 주요 기능
 
 Security뿐 아니라, 실제 커뮤니티 서비스 기능 전체를 구현했습니다.
 
