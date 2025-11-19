@@ -1,5 +1,5 @@
-##🚀 Backend — Spring Boot REST API & JWT Security
-###📌 프로젝트 개요
+##🚀 Backend — Spring Boot REST API & JWT Security##
+###📌 프로젝트 개요###
 
 **아무말 대잔치(Backend)**
 사용자 인증부터 게시글/댓글/프로필 관리까지 제공하는 커뮤니티 서비스 백엔드입니다.
