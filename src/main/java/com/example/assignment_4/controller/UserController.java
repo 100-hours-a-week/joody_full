@@ -38,22 +38,6 @@ public class UserController {
 
 
 
-    @PostMapping("/login")
-    @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인합니다.")
-    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest req) {
-        try {
-            LoginResponse response = userService.login(req.getEmail(), req.getPassword());
-            return ResponseEntity.ok(new ApiResponse<>("login_success", response));
-        } catch (RuntimeException e) {
-            if ("emailOrPassword_mismatch".equals(e.getMessage())) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(new ApiResponse<>("emailOrPassword_mismatch", null));
-            }
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("login_failed", null));
-        }
-    }
-
 
     @PutMapping("/{userId}/profile")
     @Operation(summary = "닉네임 수정", description = "회원 닉네임을 변경합니다.")
