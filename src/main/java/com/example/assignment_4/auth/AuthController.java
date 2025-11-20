@@ -62,7 +62,7 @@ public class AuthController {
                 .httpOnly(true)
                 .secure(false)  // ❗ HTTPS일 때 true로 바꿔 (로컬 개발은 false)
                 .path("/")
-                .sameSite("Strict")
+                .sameSite("Lax")  // samesite Lax 설정
                 .maxAge(7 * 24 * 60 * 60)
                 .build();
 
