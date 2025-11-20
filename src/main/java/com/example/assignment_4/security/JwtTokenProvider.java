@@ -23,7 +23,7 @@ public class JwtTokenProvider {
     // =============================
     // 🔥 토큰 만료시간
     // =============================
-    private final long ACCESS_TOKEN_EXPIRE = 1000L * 60 * 60;        // 1시간
+    private final long ACCESS_TOKEN_EXPIRE = 1000L * 60 * 30;        // 30분
     private final long REFRESH_TOKEN_EXPIRE = 1000L * 60 * 60 * 24 * 7; // 7일
 
     // =============================
