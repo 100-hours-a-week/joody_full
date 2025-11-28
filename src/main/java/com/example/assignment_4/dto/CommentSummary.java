@@ -14,6 +14,9 @@ public class CommentSummary {
     @Schema(description = "댓글 ID", example = "1")
     private Long id;
 
+    @Schema(description = "작성자 ID", example = "24")
+    private Long authorId;   // ⭐ 추가된 필드
+
     @Schema(description = "작성자 닉네임", example = "joody")
     private String author;
 
@@ -32,6 +35,7 @@ public class CommentSummary {
     public static CommentSummary from(Comment comment) {
         return CommentSummary.builder()
                 .id(comment.getId())
+                .authorId(comment.getUser().getId())
                 .author(comment.getUser().getNickname())
                 .authorProfileImage(comment.getUser().getProfileImage()) // ✅ 추가!
                 .content(comment.getContent())
