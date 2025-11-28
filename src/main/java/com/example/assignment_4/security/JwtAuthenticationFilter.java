@@ -25,21 +25,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // ⭐ 1) Access Token은 Authorization 헤더로 받는다
         String token = resolveAccessToken(request);
 
-        // ⭐ 2) Access Token이 유효하면 인증 처리
-        if (token != null && jwtTokenProvider.validateToken(token)) {
-            Authentication authentication = jwtTokenProvider.getAuthentication(token);
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+        if (token != null) {
+            try {
+                if (jwtTokenProvider.validateToken(token)) {
+                    Authentication auth = jwtTokenProvider.getAuthentication(token);
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                } else {
+                    // 토큰 만료 or 잘못됨
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
+            } catch (Exception e) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                return;
+            }
         }
 
-        // ⭐ 3) 다음 필터로 진행
         filterChain.doFilter(request, response);
     }
 
     /**
-     * ⭐ Authorization: Bearer <accessToken>
+     * Authorization: Bearer <accessToken>
      * Refresh Token은 여기서 읽지 않는다 (쿠키 전용)
      */
     private String resolveAccessToken(HttpServletRequest request) {
