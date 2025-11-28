@@ -43,9 +43,7 @@ public class SecurityConfig {
 
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))          // http cors 설정
-                .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                ) // JWT(쿠키저장) CSRF 활성화
+                .csrf(csrf -> csrf.disable())                                              //
 
                 // 🔥 세션 완전 비활성화 (JWT 구조에서 필수)
                 .sessionManagement(
@@ -85,7 +83,9 @@ public class SecurityConfig {
         // ⭐ 프론트 주소 명확하게 허용해야 credentials:true가 동작함
         config.setAllowedOrigins(Arrays.asList(
                 "http://localhost:5500",     // LiveServer
-                "http://127.0.0.1:5500"
+                "http://127.0.0.1:5500",
+                "http://localhost:5173",
+                "http://localhost:5501"
         ));
 
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH"));
