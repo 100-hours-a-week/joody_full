@@ -1,6 +1,7 @@
 package com.example.assignment_4.auth;
 
 import com.example.assignment_4.common.ApiResponse;
+import com.example.assignment_4.dto.AccessTokenResponse;
 import com.example.assignment_4.dto.LoginRequest;
 import com.example.assignment_4.dto.LoginResponse;
 import com.example.assignment_4.dto.UserInfo;
@@ -35,12 +36,17 @@ public class AuthController {
             HttpServletResponse response
     ) {
 
-        // 1) Security 인증
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        req.getEmail(), req.getPassword()
-                )
-        );
+        try {
+            // 1) Spring Security 인증
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            req.getEmail(), req.getPassword()
+                    )
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(401)
+                    .body(new ApiResponse<>("invalid_credentials", null));
+        }
 
         // 2) 사용자 조회
         User user = userRepository.findByEmail(req.getEmail())
@@ -57,18 +63,18 @@ public class AuthController {
         String accessToken = jwtTokenProvider.createAccessToken(user.getId());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
-        // 4) Refresh Token을 HttpOnly 쿠키에 저장
+        // 4) Refresh Token을 HttpOnly 쿠키로 저장
         ResponseCookie cookie = ResponseCookie.from("refresh_token", refreshToken)
                 .httpOnly(true)
-                .secure(false)  // ❗ HTTPS일 때 true로 바꿔 (로컬 개발은 false)
+                .secure(false)
+                .sameSite("Lax")
                 .path("/")
-                .sameSite("Lax")  // samesite Lax 설정
                 .maxAge(7 * 24 * 60 * 60)
                 .build();
 
         response.addHeader("Set-Cookie", cookie.toString());
 
-        // 5) Access Token + UserInfo 응답
+        // 5) 응답
         return ResponseEntity.ok(
                 new ApiResponse<>(
                         "login_success",
@@ -81,7 +87,7 @@ public class AuthController {
      *   🔥 2) AccessToken 재발급
      * =========================== */
     @PostMapping("/refresh")
-    public ResponseEntity<ApiResponse<String>> refresh(HttpServletRequest request) {
+    public ResponseEntity<ApiResponse<AccessTokenResponse>> refresh(HttpServletRequest request) {
 
         String refreshToken = extractRefreshToken(request);
         if (refreshToken == null || !jwtTokenProvider.validateToken(refreshToken)) {
@@ -92,10 +98,14 @@ public class AuthController {
         Long userId = jwtTokenProvider.getUserId(refreshToken);
         String newAccessToken = jwtTokenProvider.createAccessToken(userId);
 
+        AccessTokenResponse tokenResponse = new AccessTokenResponse(newAccessToken);
+
         return ResponseEntity.ok(
-                new ApiResponse<>("access_token_refreshed", newAccessToken)
+                new ApiResponse<>("access_token_refreshed", tokenResponse)
         );
     }
+
+
 
     /** ===========================
      *   🔥 3) 로그아웃 (쿠키 삭제)

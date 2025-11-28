@@ -15,6 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 import java.util.Arrays;
 
@@ -41,8 +42,10 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))          // http cors 설정
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                ) // JWT(쿠키저장) CSRF 활성화
 
                 // 🔥 세션 완전 비활성화 (JWT 구조에서 필수)
                 .sessionManagement(
@@ -70,7 +73,7 @@ public class SecurityConfig {
     }
 
     /**
-     * 🔥 쿠키 기반 JWT 인증에는 CORS가 핵심!
+     *   쿠키 기반 JWT 인증에는 CORS가 핵심!
      * - credentials(true)
      * - allowedOrigins는 절대 "*" 쓰면 안 됨!
      */
