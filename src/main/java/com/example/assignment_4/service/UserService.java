@@ -5,6 +5,7 @@ import com.example.assignment_4.entity.User;
 import com.example.assignment_4.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -20,6 +21,7 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
 
     // ✅ 회원가입 + 이미지 동시 업로드
@@ -38,7 +40,7 @@ public class UserService {
 
         User user = User.builder()
                 .email(req.getEmail())
-                .password(req.getPassword()) // 비밀번호 인코딩은 나중에 추가 가능
+                .password(passwordEncoder.encode(req.getPassword())) // 비밀번호 인코딩
                 .nickname(req.getNickname())
                 .build();
 
@@ -69,25 +71,25 @@ public class UserService {
     }
 
     // 로그인
-    public LoginResponse login(String email, String password) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("invalid_credentials"));
-
-        // 삭제된 계정 로그인 차단
-        if (user.getDeletedAt() != null) {
-            throw new RuntimeException("deleted_user");
-        }
-
-        if (!user.getPassword().equals(password)) {
-            throw new RuntimeException("emailOrPassword_mismatch");
-        }
-
-        // (JWT 발급 로직은 생략)
-        return new LoginResponse(
-                new UserInfo(user.getId(), user.getEmail(), user.getNickname(),user.getProfileImage()),
-                "eyJhbGciOi..." // 토큰 예시
-        );
-    }
+//    public LoginResponse login(String email, String password) {
+//        User user = userRepository.findByEmail(email)
+//                .orElseThrow(() -> new RuntimeException("invalid_credentials"));
+//
+//        // 삭제된 계정 로그인 차단
+//        if (user.getDeletedAt() != null) {
+//            throw new RuntimeException("deleted_user");
+//        }
+//
+//        if (!user.getPassword().equals(password)) {
+//            throw new RuntimeException("emailOrPassword_mismatch");
+//        }
+//
+//        // (JWT 발급 로직은 생략)
+//        return new LoginResponse(
+//                new UserInfo(user.getId(), user.getEmail(), user.getNickname(),user.getProfileImage()),
+//                "eyJhbGciOi..." // 토큰 예시
+//        );
+//    }
 
     // 닉네임 수정
     public void updateProfile(Long userId, ProfileUpdateRequest req) {
@@ -189,7 +191,7 @@ public class UserService {
             throw new IllegalArgumentException("password_mismatch");
         }
 
-        user.setPassword(newPassword);
+        user.setPassword(passwordEncoder.encode(newPassword)); // 비밀번호 암호화 적용
         userRepository.save(user);
     }
 }
