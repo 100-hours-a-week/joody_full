@@ -18,6 +18,9 @@ public class PostDetail {
     @Schema(description = "게시글 ID", example = "1")
     private Long postId;
 
+    @Schema(description = "작성자 ID", example = "26")
+    private Long authorId;
+
     @Schema(description = "게시글 제목", example = "오늘의 개발 일지")
     private String title;
 
@@ -52,6 +55,7 @@ public class PostDetail {
     public static PostDetail from(Post post) {
         return new PostDetail(
                 post.getId(),
+                post.getUser() != null ? post.getUser().getId() : null,
                 post.getTitle(),
                 post.getUser() != null ? post.getUser().getNickname() : "탈퇴한 사용자",
                 post.getUser() != null ? post.getUser().getProfileImage() : null, // ✅ 추가된 부분!
