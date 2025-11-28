@@ -14,7 +14,9 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addMapping("/**") // 모든 경로 허용
                 .allowedOrigins(
                         "http://127.0.0.1:5500", // Live Server 기본 주소
-                        "http://localhost:5500"   // 다른 브라우저 환경 대비
+                        "http://localhost:5500",   // 다른 브라우저 환경 대비
+                        "http://localhost:5173"
+
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
