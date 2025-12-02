@@ -36,6 +36,15 @@ public class AuthController {
             HttpServletResponse response
     ) {
 
+        // 1) 사용자가 삭제된 상태인지 먼저 검사
+        User user = userRepository.findByEmailAndDeletedAtIsNull(req.getEmail())
+                .orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.status(403)
+                    .body(new ApiResponse<>("deleted_or_not_found_user", null));
+        }
+
         try {
             // 1) Spring Security 인증
             authenticationManager.authenticate(
@@ -49,8 +58,8 @@ public class AuthController {
         }
 
         // 2) 사용자 조회
-        User user = userRepository.findByEmail(req.getEmail())
-                .orElseThrow(() -> new RuntimeException("user_not_found"));
+//        User user = userRepository.findByEmail(req.getEmail())
+//                .orElseThrow(() -> new RuntimeException("user_not_found"));
 
         UserInfo userInfo = new UserInfo(
                 user.getId(),
@@ -96,12 +105,19 @@ public class AuthController {
         }
 
         Long userId = jwtTokenProvider.getUserId(refreshToken);
+
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+                .orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.status(403)
+                    .body(new ApiResponse<>("deleted_user", null));
+        }
+
         String newAccessToken = jwtTokenProvider.createAccessToken(userId);
 
-        AccessTokenResponse tokenResponse = new AccessTokenResponse(newAccessToken);
-
         return ResponseEntity.ok(
-                new ApiResponse<>("access_token_refreshed", tokenResponse)
+                new ApiResponse<>("access_token_refreshed", new AccessTokenResponse(newAccessToken))
         );
     }
 
