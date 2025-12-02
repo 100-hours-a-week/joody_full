@@ -39,13 +39,14 @@ public class UserController {
 
 
 
-    @PutMapping("/{userId}/profile")
-    @Operation(summary = "닉네임 수정", description = "회원 닉네임을 변경합니다.")
+    @PutMapping(value = "/{userId}/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<Void>> updateProfile(
             @PathVariable Long userId,
-            @Valid @RequestBody ProfileUpdateRequest req
-    ) {
-        userService.updateProfile(userId, req);
+            @RequestPart(value = "nickname", required = false) String nickname,
+            @RequestPart(value = "profile_image", required = false) MultipartFile file
+    ) throws Exception {
+
+        userService.updateNicknameAndImage(userId, nickname, file);
         return ResponseEntity.ok(new ApiResponse<>("update_success", null));
     }
 
