@@ -105,6 +105,18 @@ public class UserService {
         userRepository.save(user);
     }
 
+    public void updateNicknameAndImage(Long userId, String nickname, MultipartFile file) throws Exception {
+        // 닉네임만 변경
+        if (nickname != null && !nickname.isBlank()) {
+            updateProfile(userId, new ProfileUpdateRequest(nickname));
+        }
+
+        // 이미지 변경
+        if (file != null && !file.isEmpty()) {
+            uploadProfileImage(userId, file);
+        }
+    }
+
      public String uploadProfileImage(Long userId, MultipartFile file) throws IOException {
          User user = userRepository.findById(userId)
                  .orElseThrow(() -> new RuntimeException("user_not_found"));
