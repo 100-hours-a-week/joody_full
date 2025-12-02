@@ -38,15 +38,15 @@ public class PostService {
     public Map<String, Object> getPostList(LocalDateTime cursorCreatedAt, int size, String keyword) {
         // 1️⃣ DB에서 커서 기준 다음 게시글 가져오기
         Pageable pageable = PageRequest.of(0, size);
-        List<Post> posts = postRepository.findNextPosts(cursorCreatedAt, pageable);
+        List<Post> posts = postRepository.findNextPosts(cursorCreatedAt, keyword, pageable);
 
         // 2️⃣ 검색어 필터링 (옵션)
-        if (keyword != null && !keyword.isBlank()) {
-            posts = posts.stream()
-                    .filter(p -> p.getTitle().contains(keyword)
-                            || (p.getUser() != null && p.getUser().getNickname().contains(keyword)))
-                    .collect(Collectors.toList());
-        }
+//        if (keyword != null && !keyword.isBlank()) {
+//            posts = posts.stream()
+//                    .filter(p -> p.getTitle().contains(keyword)
+//                            || (p.getUser() != null && p.getUser().getNickname().contains(keyword)))
+//                    .collect(Collectors.toList());
+//        }
 
         // 3️⃣ DTO 변환
         List<PostSummary> summaries = posts.stream()
