@@ -23,16 +23,21 @@ public interface PostRepository extends JpaRepository<Post, Long> {
      * - 삭제된 게시글 및 탈퇴 유저 제외
      */
     @Query("""
-        SELECT p
-        FROM Post p
-        JOIN FETCH p.user u
-        WHERE p.deletedAt IS NULL
-          AND u.deletedAt IS NULL
-          AND (:cursorCreatedAt IS NULL OR p.createdAt < :cursorCreatedAt)
-        ORDER BY p.createdAt DESC
-    """)
+    SELECT p
+    FROM Post p
+    JOIN FETCH p.user u
+    WHERE p.deletedAt IS NULL
+      AND u.deletedAt IS NULL
+      AND (:cursorCreatedAt IS NULL OR p.createdAt < :cursorCreatedAt)
+      AND (:keyword IS NULL OR p.title LIKE %:keyword%
+                       OR p.content LIKE %:keyword%
+                       OR u.nickname LIKE %:keyword%)
+    ORDER BY p.createdAt DESC
+""")
     List<Post> findNextPosts(@Param("cursorCreatedAt") LocalDateTime cursorCreatedAt,
+                             @Param("keyword") String keyword,
                              Pageable pageable);
+
 
     @Query("""
     SELECT p
