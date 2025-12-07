@@ -39,7 +39,11 @@ public class UserController {
 
 
 
-    @PutMapping(value = "/{userId}/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    // ======================
+// 🎨 프로필 수정 리팩토링
+// ======================
+    @PutMapping("/{userId}/profile")
+    @Operation(summary = "닉네임 + 프로필 이미지 수정", description = "닉네임과 이미지 모두를 multipart/form-data로 수정합니다.")
     public ResponseEntity<ApiResponse<Void>> updateProfile(
             @PathVariable Long userId,
             @RequestPart(value = "nickname", required = false) String nickname,
@@ -49,6 +53,36 @@ public class UserController {
         userService.updateNicknameAndImage(userId, nickname, file);
         return ResponseEntity.ok(new ApiResponse<>("update_success", null));
     }
+
+    // ======================
+// ✨ 닉네임만 변경(JSON)
+// ======================
+    @PutMapping("/{userId}/profile/nickname")
+    @Operation(summary = "닉네임만 수정", description = "JSON 형태로 닉네임을 수정합니다.")
+    public ResponseEntity<ApiResponse<Void>> updateNickname(
+            @PathVariable Long userId,
+            @RequestBody Map<String, String> request
+    ) throws Exception {
+
+        String nickname = request.get("nickname");
+        userService.updateNickname(userId, nickname);
+        return ResponseEntity.ok(new ApiResponse<>("nickname_update_success", null));
+    }
+
+    // ======================
+// 🖼 이미지 단독 변경(multipart)
+// ======================
+    @PutMapping("/{userId}/profile/image")
+    @Operation(summary = "이미지 단독 수정", description = "multipart 프로필 이미지만 업로드합니다.")
+    public ResponseEntity<ApiResponse<String>> updateProfileImage(
+            @PathVariable Long userId,
+            @RequestPart("profile_image") MultipartFile file
+    ) throws Exception {
+
+        String imageUrl = userService.updateProfileImage(userId, file);
+        return ResponseEntity.ok(new ApiResponse<>("profile_image_update_success", imageUrl));
+    }
+
 
 
     @PostMapping("/{userId}/profile/image")

@@ -91,29 +91,96 @@ public class UserService {
 //        );
 //    }
 
-    // 닉네임 수정
-    public void updateProfile(Long userId, ProfileUpdateRequest req) {
+
+
+    // =============================
+    // 닉네임 단독 수정
+    // =============================
+    public void updateNickname(Long userId, String nickname) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("user_not_found"));
 
-        // 닉네임 중복 체크 추가
-        if (userRepository.existsByNickname(req.getNickname())) {
+        if (nickname == null || nickname.isBlank()) {
+            throw new IllegalArgumentException("nickname_empty");
+        }
+
+        // 중복 체크 (본인 제외)
+        if (!nickname.equals(user.getNickname()) &&
+                userRepository.existsByNickname(nickname)) {
             throw new IllegalArgumentException("duplicate_nickname");
         }
 
-        user.setNickname(req.getNickname());
+        user.setNickname(nickname);
         userRepository.save(user);
     }
 
-    public void updateNicknameAndImage(Long userId, String nickname, MultipartFile file) throws Exception {
-        // 닉네임만 변경
-        if (nickname != null && !nickname.isBlank()) {
-            updateProfile(userId, new ProfileUpdateRequest(nickname));
+    // =============================
+    // 이미지 단독 수정
+    // =============================
+    public String updateProfileImage(Long userId, MultipartFile file) throws IOException {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("user_not_found"));
+
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("file_empty");
         }
 
-        // 이미지 변경
+        String uploadDir = "uploads";
+        Files.createDirectories(Paths.get(uploadDir));
+
+        // 기존 이미지 삭제
+        if (user.getProfileImage() != null) {
+            String oldImagePath = user.getProfileImage(); // "/uploads/img_123.png"
+            try {
+                if (oldImagePath.startsWith("/uploads/")) {
+                    Path oldFile = Paths.get("." + oldImagePath);
+                    Files.deleteIfExists(oldFile);
+                }
+            } catch (IOException ignored) {}
+        }
+
+        String extension = "";
+        String original = file.getOriginalFilename();
+        if (original != null && original.contains(".")) {
+            extension = original.substring(original.lastIndexOf("."));
+        }
+
+        String shortName = "img_" + UUID.randomUUID().toString().substring(0, 6) + extension;
+        Path path = Paths.get(uploadDir, shortName);
+        Files.write(path, file.getBytes());
+
+        String imageUrl = "/uploads/" + shortName;
+
+        user.setProfileImage(imageUrl);
+        userRepository.save(user);
+
+        return "http://localhost:8080" + imageUrl;
+    }
+
+//    // 닉네임 수정
+//    public void updateProfile(Long userId, ProfileUpdateRequest req) {
+//        User user = userRepository.findById(userId)
+//                .orElseThrow(() -> new RuntimeException("user_not_found"));
+//
+//        // 닉네임 중복 체크 추가
+//        if (userRepository.existsByNickname(req.getNickname())) {
+//            throw new IllegalArgumentException("duplicate_nickname");
+//        }
+//
+//        user.setNickname(req.getNickname());
+//        userRepository.save(user);
+//    }
+// =============================
+// 닉네임 + 이미지 동시 수정
+// =============================
+    public void updateNicknameAndImage(Long userId, String nickname, MultipartFile file) throws Exception {
+
+        if (nickname != null && !nickname.isBlank()) {
+            updateNickname(userId, nickname); // 재사용
+        }
+
         if (file != null && !file.isEmpty()) {
-            uploadProfileImage(userId, file);
+            updateProfileImage(userId, file); // 재사용
         }
     }
 
@@ -201,6 +268,11 @@ public class UserService {
         // ✅ 2새 비밀번호 일치 확인
         if (!newPassword.equals(newPassword_check)) {
             throw new IllegalArgumentException("password_mismatch");
+        }
+
+        // 🔥 기존 비밀번호와 동일한지 체크
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new IllegalArgumentException("same_password");
         }
 
         user.setPassword(passwordEncoder.encode(newPassword)); // 비밀번호 암호화 적용
