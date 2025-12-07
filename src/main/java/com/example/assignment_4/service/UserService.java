@@ -1,147 +1,209 @@
 package com.example.assignment_4.service;
 
-import com.example.assignment_4.dto.LoginResponse;
-import com.example.assignment_4.dto.ProfileUpdateRequest;
-import com.example.assignment_4.dto.SignupRequest;
-import com.example.assignment_4.dto.UserInfo;
+import com.example.assignment_4.dto.*;
+import com.example.assignment_4.entity.User;
+import com.example.assignment_4.repository.UserRepository;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.nio.file.*;
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
+@Transactional
 public class UserService {
 
-    // 간단하게 메모리에 회원 정보를 저장 (DB 대체)
-    private Map<String, Object> userData = new HashMap<>();
-    private boolean deleted = false; // 탈퇴 여부 flag
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService() {
-        // 초기 회원 정보 세팅 (이미 회원가입된 상태라고 가정)
-        userData.put("id", 1L);
-        userData.put("email", "example@example.com");
-        userData.put("nickname", "joody");
-    }
 
-    /**
-     * 이메일 & 비밀번호 검증 로직
-     */
-    public boolean validateCredentials(String email, String password) {
-        if (deleted) return false;
-        return Objects.equals(userData.get("email"), email) &&
-                Objects.equals(userData.get("password"), password);
-
-        /* Objects.equals(a, b)는 a나 b가 null이어도 절대 NPE를 안 내고 안전하게 false를 반환함. */
-    }
-
-    /**
-     * 로그인 처리 로직
-     */
-    public LoginResponse login(String email, String password) {
-        if (!validateCredentials(email, password)) {
-            throw new RuntimeException("invalid_credentials");
-        }
-
-        return new LoginResponse(
-                new UserInfo(1L, (String) userData.get("nickname")),
-                "eyJhbGciOi..." // 예시 토큰
-        );
-    }
-
-    /* 회원가입 */
-    public Long signup(SignupRequest req) {
+    // ✅ 회원가입 + 이미지 동시 업로드
+    public Long signupWithImage(SignupRequest req, MultipartFile file) throws IOException {
         if (!req.getPassword().equals(req.getPassword_check())) {
-            throw new IllegalArgumentException("invalid_request");
+            throw new IllegalArgumentException("password_mismatch");
         }
 
-        // 중복 이메일/닉네임 체크 (테스트용)
-        if ("example@example.com".equals(req.getEmail()) || "joody".equals(req.getNickname())) {
-            throw new IllegalStateException("duplicate_email_or_nickname");
+        if (userRepository.existsByEmail(req.getEmail())) {
+            throw new IllegalArgumentException("duplicate_email");
         }
 
-        // 신규 데이터 저장
-        userData.put("id", 2L);
-        userData.put("email", req.getEmail());
-        userData.put("nickname", req.getNickname());
-        userData.put("password", req.getPassword());
-        deleted = false; // 새 회원은 탈퇴 상태 아님
-
-        return 2L;
-    }
-
-    /* 회원정보 수정 */
-    public void updateProfile(ProfileUpdateRequest req) {
-        if (deleted) {
-            throw new RuntimeException("user_not_found");
+        if (userRepository.existsByNickname(req.getNickname())) {
+            throw new IllegalArgumentException("duplicate_nickname");
         }
 
-        if ("joody".equals(req.getNickname())) {
-            throw new IllegalStateException("duplicate_nickname");
-        }
+        User user = User.builder()
+                .email(req.getEmail())
+                .password(passwordEncoder.encode(req.getPassword())) // 비밀번호 인코딩
+                .nickname(req.getNickname())
+                .build();
 
-        // 닉네임 변경
-        userData.put("nickname", req.getNickname());
-    }
+        // 🔹 파일 업로드 처리
+        if (file != null && !file.isEmpty()) {
+            String uploadDir = "uploads";
+            Files.createDirectories(Paths.get(uploadDir));
 
-    /* 회원탈퇴 */
-    public void withdrawUser() {
-        // 실제 환경에서는 DB에서 delete or 탈퇴 플래그 변경
-        deleted = true;
-    }
-
-    /* 회원정보 조회 */
-    public Map<String, Object> getUserProfile() {
-        if (deleted) {
-            return null;
-        }
-        return userData;
-    }
-
-    /*프로필 이미지 업로드*/
-
-    public void updateProfileImage(String imageUrl) {
-        if (deleted) {
-            throw new RuntimeException("user_not_found");
-        }
-        userData.put("profile_image", imageUrl);
-    }
-
-    /*프로필 이미지 삭제*/
-    public void deleteProfileImage() {
-        if (deleted) {
-            throw new RuntimeException("user_not_found");
-        }
-
-        String imageUrl = (String) userData.get("profile_image");
-        if (imageUrl != null) {
-            // 파일 경로 추출
-            String filename = imageUrl.substring(imageUrl.lastIndexOf("/") + 1);
-            Path filePath = Paths.get("uploads", filename);
-            try {
-                Files.deleteIfExists(filePath);
-            } catch (IOException e) {
-                throw new RuntimeException("file_delete_failed");
+            // 확장자 추출
+            String extension = "";
+            String original = file.getOriginalFilename();
+            if (original != null && original.contains(".")) {
+                extension = original.substring(original.lastIndexOf("."));
             }
 
-            userData.remove("profile_image");
+            // 짧은 랜덤 파일명 생성 (예: img_12a7f3.png)
+            String shortName = "img_" + UUID.randomUUID().toString().substring(0, 6) + extension;
+            Path path = Paths.get(uploadDir, shortName);
+            Files.write(path, file.getBytes());
+
+            // DB에는 URL만 저장
+            String imageUrl = "http://localhost:8080/uploads/" + shortName;
+            user.setProfileImage(imageUrl);
+        }
+
+        userRepository.save(user);
+        return user.getId();
+    }
+
+    // 로그인
+//    public LoginResponse login(String email, String password) {
+//        User user = userRepository.findByEmail(email)
+//                .orElseThrow(() -> new RuntimeException("invalid_credentials"));
+//
+//        // 삭제된 계정 로그인 차단
+//        if (user.getDeletedAt() != null) {
+//            throw new RuntimeException("deleted_user");
+//        }
+//
+//        if (!user.getPassword().equals(password)) {
+//            throw new RuntimeException("emailOrPassword_mismatch");
+//        }
+//
+//        // (JWT 발급 로직은 생략)
+//        return new LoginResponse(
+//                new UserInfo(user.getId(), user.getEmail(), user.getNickname(),user.getProfileImage()),
+//                "eyJhbGciOi..." // 토큰 예시
+//        );
+//    }
+
+    // 닉네임 수정
+    public void updateProfile(Long userId, ProfileUpdateRequest req) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("user_not_found"));
+
+        // 닉네임 중복 체크 추가
+        if (userRepository.existsByNickname(req.getNickname())) {
+            throw new IllegalArgumentException("duplicate_nickname");
+        }
+
+        user.setNickname(req.getNickname());
+        userRepository.save(user);
+    }
+
+    public void updateNicknameAndImage(Long userId, String nickname, MultipartFile file) throws Exception {
+        // 닉네임만 변경
+        if (nickname != null && !nickname.isBlank()) {
+            updateProfile(userId, new ProfileUpdateRequest(nickname));
+        }
+
+        // 이미지 변경
+        if (file != null && !file.isEmpty()) {
+            uploadProfileImage(userId, file);
         }
     }
 
+     public String uploadProfileImage(Long userId, MultipartFile file) throws IOException {
+         User user = userRepository.findById(userId)
+                 .orElseThrow(() -> new RuntimeException("user_not_found"));
+
+         if (file == null || file.isEmpty()) {
+             throw new IllegalArgumentException("file_empty");
+         }
+
+         String uploadDir = "uploads";
+         Files.createDirectories(Paths.get(uploadDir));
+
+         // 🔹 기존 이미지 삭제(선택)
+         // DB에 이전 이미지가 있을 경우 실제 파일 삭제
+         if (user.getProfileImage() != null) {
+             String oldImagePath = user.getProfileImage(); // "/uploads/img_123abc.png"
+             try {
+                 if (oldImagePath.startsWith("/uploads/")) {
+                     Path oldFile = Paths.get("." + oldImagePath); // "./uploads/img_123abc.png"
+                     Files.deleteIfExists(oldFile);
+                 }
+             } catch (IOException ignored) {
+                 // 삭제 실패해도 기능은 지속
+             }
+         }
+
+         // 🔹 확장자 추출
+         String extension = "";
+         String original = file.getOriginalFilename();
+         if (original != null && original.contains(".")) {
+             extension = original.substring(original.lastIndexOf("."));
+         }
+
+         // 🔹 랜덤 파일명 생성 (짧고 안전하게)
+         String shortName = "img_" + UUID.randomUUID().toString().substring(0, 6) + extension;
+
+         Path path = Paths.get(uploadDir, shortName);
+         Files.write(path, file.getBytes());
+
+         // ✅ DB에는 상대 경로만 저장
+         String imageUrl = "/uploads/" + shortName;
+
+         user.setProfileImage(imageUrl); // ✅ 상대 경로 저장
+         userRepository.save(user);
+
+         // ✅ 프런트에는 전체 URL 반환
+         return "http://localhost:8080" + imageUrl;
+     }
 
 
-    public void updatePassword(String newPassword) {
-        if (deleted) {
-            throw new IllegalArgumentException("user_not_found");
-        }
 
-        // 실제로는 비밀번호 암호화 후 DB 업데이트해야 함
-        userData.put("password", newPassword);
+    // 프로필 이미지 삭제
+    public void deleteProfileImage(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("user_not_found"));
+        user.setProfileImage(null);
+        userRepository.save(user);
     }
 
+    // 회원정보 조회
+    public UserInfo getUserProfile(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("user_not_found"));
+        return new UserInfo(user.getId(), user.getEmail(), user.getNickname(), user.getProfileImage());
+    }
 
+    // 회원 탈퇴
+    // 회원 탈퇴 (Soft Delete)
+    public void withdrawUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("user_not_found"));
+
+        // 실제 삭제 아니고  삭제 시간만 기록
+        user.setDeletedAt(LocalDateTime.now());
+        userRepository.save(user);
+    }
+
+    // 비밀번호 변경
+    public void updatePassword(Long userId, String newPassword, String newPassword_check) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("user_not_found"));
+
+        // ✅ 2새 비밀번호 일치 확인
+        if (!newPassword.equals(newPassword_check)) {
+            throw new IllegalArgumentException("password_mismatch");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword)); // 비밀번호 암호화 적용
+        userRepository.save(user);
+    }
 }
