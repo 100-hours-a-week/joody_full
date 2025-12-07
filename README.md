@@ -165,3 +165,12 @@ src/main/java/com/example/assignment_4
     ├── ApiResponse
     └── ExceptionHandler
 ```
+
+### 📊 5. 모델링 (E-R Diagram)
+`E-R Diagram`  
+요구사항을 기반으로 모델링한 E-R Diagram입니다.  
+<br/>
+
+<p align="center">
+  <img width="1207" height="569" alt="Image" src="https://github.com/user-attachments/assets/e921137e-8bbd-468a-b160-76d6be735cde" />
+</p>
