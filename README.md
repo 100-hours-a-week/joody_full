@@ -14,10 +14,20 @@
 <br />
 <br />
 
-## 🔗 Frontend Repository
-<a href="https://github.com/100-hours-a-week/joody_front" target="_blank">
-  <img src="https://img.shields.io/badge/GO%20TO%20REPO-React-61DAFB?style=for-the-badge&logo=react&logoColor=white"/>
-</a>
+## 📦 Frontend Repositories
+
+> 아무말 대잔치 프론트엔드는 Vanilla JS 기반 SPA 버전과, React 기반 리팩토링 버전으로 구성되어 있습니다.
+
+<div align="center">
+
+| 프로젝트 버전 | Repository | 설명 |
+|--------------|------------|-------|
+| **Vanilla JavaScript (SPA)** | **https://github.com/100-hours-a-week/joody_front** | VDOM 기반 SPA 엔진 직접 구현, 인피니티 스크롤, 커스텀 store 상태관리 |
+| **React (Refactoring)** | **https://github.com/100-hours-a-week/joody_React** | React SPA, Styled-Components, JWT 인증, 무한스크롤, 커스텀 hooks |
+
+</div>
+
+<br/>
 
 ## 🛠 기술 스택
 ### Backend
