@@ -14,6 +14,11 @@
 <br />
 <br />
 
+## 🔗 Frontend Repository
+<a href="https://github.com/100-hours-a-week/joody_front" target="_blank">
+  <img src="https://img.shields.io/badge/GO%20TO%20REPO-React-61DAFB?style=for-the-badge&logo=react&logoColor=white"/>
+</a>
+
 ## 🛠 기술 스택
 ### Backend
 - Spring Boot 3.x
